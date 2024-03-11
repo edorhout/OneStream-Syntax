@@ -1,0 +1,74 @@
+	#Region "Clear Data"							
+					'Clear Previously allocated data
+						api.Data.ClearCalculatedData(True,True,True,True,"A#","F#","O#","I#","U1#","U2#","U3#","U4#","U5#","U6#","U7#","U8#")
+	#End Region	
+						
+	#Region "Member IDs"								
+					'Member IDs
+						'Lead with dimension abbr. (ex. F_)
+						'Make sure to change dimension in "GetMemberId(dimtype.DIM.Id, "")"
+						'"MemberName" should not include prefix (ex. F#)
+						
+						Dim F_NameId As Integer = api.Members.GetMemberId(dimtype.Flow.Id, "MemberName")
+						Dim UD5_NameId As Integer = api.Members.GetMemberId(dimtype.UD5.Id, "MemberName")
+						Dim UD7_NameId As Integer = api.Members.GetMemberId(dimtype.UD7.Id, "MemberName")
+	#End Region							
+					'Create data buffer to hold results
+						Dim Results As New DataBuffer
+							
+	#Region "Name Region"
+
+					'Data buffer will be all members/intersections you want to be "grabbing"
+						Dim Name As DataBuffer = api.Data.GetDataBufferUsingFormula("FilterMembers(F#EndBal:O#Import:V#Periodic:I#None:U5#None:U6#None:U7#None,A#Assets.Base,U1#Top.Base,U2#Top.Base,U3#Top.Base,U4#Top.Base,U8#Top.Base)")
+						'Name.LogDataBuffer(api, "Name ", 100)
+						
+							For Each NameCell As DataBufferCell In Name.DataBufferCells.Values
+								
+								'Declare current loop variables
+									'only loop through dimensions with ".Base" in data buffer
+									'Make sure to change dimension in "GetDIMName(api)"
+									
+									Dim NameAct As String = NameCell.DataBufferCellPk.GetAccountName(api)
+									Dim NameCurUD1 As String = NameCell.DataBufferCellPk.GetUD1Name(api)
+									Dim NameCurUD2 As String = NameCell.DataBufferCellPk.GetUD2Name(api)
+									Dim NameCurUD3 As String = NameCell.DataBufferCellPk.GetUD3Name(api)
+									Dim NameCurUD4 As String = NameCell.DataBufferCellPk.GetUD4Name(api)
+									'Dim NameCurUD5 As String = NameCell.DataBufferCellPk.GetUD5Name(api)
+									'Dim NameCurUD6 As String = NameCell.DataBufferCellPk.GetUD6Name(api)
+									'Dim NameCurUD7 As String = NameCell.DataBufferCellPk.GetUD7Name(api)
+									Dim NameCurUD8 As String = NameCell.DataBufferCellPk.GetUD8Name(api)
+
+								'Variables that will be used in calculation 
+									'If your calculation variable will be the same intersections as the data buffer above, use syntax below.
+										Dim NameAmt As Decimal = NameCell.CellAmount
+										'NameAmt.LogDataBuffer(api, "NameAmt ", 100)
+									'If your calculation variable will not be the same intersections as the data buffer above, use syntax below and specify dimensions.		
+										Dim NamePer As Decimal = api.Data.GetDataCell("A#[" & NameAct & "]:F#EndBal:O#Forms:V#Periodic:I#None:U1#[" & NameCurUD1 & "]:U2#[" & NameCurUD2 & "]:U3#[" & NameCurUD3 & "]:U4#[" & NameCurUD4 & "]:U5#None:U6#None:U7#None:U8#[" & NameCurUD8 & "]").CellAmount
+										'api.LogMessage( " Percent is " & NamePer )								
+									
+										'Intersections the data is writting to
+											Dim ResultName As New DataBufferCell(NameCell)
+											ResultName.DataBufferCellPk.AccountId = NameCell.DataBufferCellPk.AccountId
+											ResultName.DataBufferCellPk.OriginId = DimConstants.Import
+											ResultName.DataBufferCellPk.FlowId = F_NameId
+											ResultName.DataBufferCellPk.ICId = DimConstants.None
+											ResultName.DataBufferCellPk.UD1Id = NameCell.DataBufferCellPk.UD1Id
+											ResultName.DataBufferCellPk.UD2Id = NameCell.DataBufferCellPk.UD2Id
+											ResultName.DataBufferCellPk.UD3Id = NameCell.DataBufferCellPk.UD3Id
+											ResultName.DataBufferCellPk.UD4Id = NameCell.DataBufferCellPk.UD4Id
+											ResultName.DataBufferCellPk.UD5Id = UD5_NameId
+											ResultName.DataBufferCellPk.UD6Id = DimConstants.None
+											ResultName.DataBufferCellPk.UD7Id = UD7_NameId
+											ResultName.DataBufferCellPk.UD8Id = NameCell.DataBufferCellPk.UD8Id
+											ResultName.CellAmount = NameAmt * NamePer
+											
+											Results.SetCell(si, ResultName, True)
+											'Results.LogDataBuffer(api, "Results   " & api.Pov.Entity.Name, 100)
+																					
+								
+							Next
+	#End Region
+
+					'This expression sets the data buffer. Only needs to be declared once after all data buffers are written.
+						Dim exprDestInfo As ExpressionDestinationInfo = api.Data.GetExpressionDestinationInfo("V#Periodic")									
+	 					api.Data.SetDataBuffer(Results, exprDestInfo,,,,,,,,,,,,,True)
